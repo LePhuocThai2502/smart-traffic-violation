@@ -17,17 +17,18 @@
 
 # 📄 1. Project Overview
 
-The **Smart Traffic Violation Detection System** is an AI-powered web application designed to automatically detect, classify, and document traffic violations from images and videos. It integrates state-of-the-art computer vision techniques—including object detection, tracking, and license-plate OCR—to provide a complete intelligent transportation monitoring solution.
+The **Smart Traffic Violation Detection System** is a full-stack AI application that automatically detects, tracks, and documents traffic violations from images and videos.
+It integrates cutting-edge computer vision models to build a complete intelligent traffic-monitoring workflow.
 
-This project combines:
+This project includes:
 
-* **YOLOv11** for traffic object & violation detection
-* **ByteTrack** for multi-object tracking
+* **YOLOv11** for violation detection (helmet, red-light, stop-line, mobile phone, triple riding,…)
+* **ByteTrack** for multi-object tracking in videos
 * **PaddleOCR** for Vietnamese license plate recognition
-* **Flask** as backend & UI
-* **SQLite** for storing violation data
+* **Flask** web backend and user interface
+* **SQLite** for structured record storage
 
-Users can upload images/videos, review and manage violation evidence, correct license plates, approve or reject records, and visualize statistics via dashboards.
+Users can upload media, review detection output, manage violation records, and analyze statistics on an interactive dashboard.
 
 ---
 
@@ -39,71 +40,71 @@ Users can upload images/videos, review and manage violation evidence, correct li
 * Stop-line crossing
 * No helmet
 * Triple riding
-* Using mobile phone while driving
-* Vehicle classification
+* Using mobile phone
+* Vehicle type detection
 
 ### 🎥 Video Tracking (ByteTrack)
 
-* High-accuracy multi-object tracking
-* Frame-based violation identification
-* Snapshot extraction
+* Multi-object ID tracking
+* Frame-level decision making
+* Automatic snapshot extraction
 
 ### 🔠 License Plate Recognition
 
-* PaddleOCR Vietnamese plate reading
-* Regex validation
-* Normalization and correction
+* PaddleOCR VN license plate reading
+* Regex-based validation
+* Auto-cleaning & normalization
 
 ### 🗂 Record Management
 
 * Approve / Reject violations
 * Edit license plates
-* View evidence (image/video)
-* Export CSV
+* View images/videos
+* Export CSV files
 
 ### 📊 Dashboard Analytics
 
-* Violation distribution
+* Violation distribution chart
 * Daily statistics
-* Approval tracking
-* Top-frequency license plates
-* Date filtering
+* Approval rates
+* Top frequent license plates
+* Date-based filtering
 
 ---
 
 # 🧠 3. Technology Stack
 
-| Category  | Technology        |
-| --------- | ----------------- |
-| Backend   | Python, Flask     |
-| Detection | YOLOv11           |
-| Tracking  | ByteTrack         |
-| OCR       | PaddleOCR         |
-| Frontend  | HTML, TailwindCSS |
-| Database  | SQLite            |
-| Charts    | Chart.js          |
+| Category      | Technology        |
+| ------------- | ----------------- |
+| Backend       | Python, Flask     |
+| Detection     | YOLOv11           |
+| Tracking      | ByteTrack         |
+| OCR           | PaddleOCR         |
+| Frontend      | TailwindCSS, HTML |
+| Database      | SQLite            |
+| Visualization | Chart.js          |
 
 ---
 
 # 🖼️ 4. Screenshots (UI Overview)
 
-> Store images in `/assets/` before using these paths.
+> Add images into `assets/` folder before using the paths below.
 
-### Dashboard
-
-![Dashboard](assets/dashboard.png)
-
-### Violation Records
-
-![Records](assets/records.png)
-
-### Upload Interface
+### 1️⃣ Upload Interface
 
 ![Upload](assets/upload.png)
 
-### Processed Video Output
+### 2️⃣ Processed Image/Video Output
 
-![Video Result](assets/video_result.png)
+![Processed](assets/video_result.png)
+
+### 3️⃣ Violation Records
+
+![Records](assets/records.png)
+
+### 4️⃣ Dashboard
+
+![Dashboard](assets/dashboard.png)
 
 ---
 
@@ -137,7 +138,7 @@ README.md
 
 # ⚙️ 6. Installation
 
-### Step 1 — Clone the repository
+### Step 1 — Clone project
 
 ```bash
 git clone https://github.com/<username>/smart-traffic-violation.git
@@ -148,7 +149,7 @@ cd smart-traffic-violation
 
 ```bash
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate     # Windows
 ```
 
 ### Step 3 — Install dependencies
@@ -161,18 +162,16 @@ pip install -r requirements.txt
 
 # 📥 7. Download Model Weights
 
-Model weights are **not included in the repository** due to size limits.
-Download the required AI models from the links below:
-
-### **🔗 YOLOv11 Model Downloads (HuggingFace)**
+Model weights are **not included** due to GitHub 100MB file limits.
+Download from HuggingFace:
 
 | Task                    | Model             | Download Link                                                                                                                                                      |
 | ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | No Helmet Detection     | `nohelmet_V11.pt` | [https://huggingface.co/LePhuocThai003/nohelmet_V11/resolve/main/nohelmet_V11.pt](https://huggingface.co/LePhuocThai003/nohelmet_V11/resolve/main/nohelmet_V11.pt) |
-| Red-Light & Stop-Line   | `DenDoV11_V3.pt`  | [https://huggingface.co/LePhuocThai003/DenDo_V11/resolve/main/DenDoV11_V3.pt](https://huggingface.co/LePhuocThai003/DenDo_V11/resolve/main/DenDoV11_V3.pt)         |
+| Red-Light / Stop-Line   | `DenDoV11_V3.pt`  | [https://huggingface.co/LePhuocThai003/DenDo_V11/resolve/main/DenDoV11_V3.pt](https://huggingface.co/LePhuocThai003/DenDo_V11/resolve/main/DenDoV11_V3.pt)         |
 | License Plate Detection | `Bienso_V11.pt`   | [https://huggingface.co/LePhuocThai003/BienSo_V11/resolve/main/Bienso_V11.pt](https://huggingface.co/LePhuocThai003/BienSo_V11/resolve/main/Bienso_V11.pt)         |
 
-Place all downloaded files into:
+Move them into:
 
 ```
 app/model/
@@ -187,7 +186,7 @@ cd app
 python app.py
 ```
 
-Application runs at:
+The application will start at:
 
 ```
 http://127.0.0.1:5000/
@@ -197,14 +196,14 @@ http://127.0.0.1:5000/
 
 # 🔌 9. API Endpoints
 
-| Endpoint        | Method | Description                |
-| --------------- | ------ | -------------------------- |
-| `/detect_image` | POST   | Detect violations in image |
-| `/detect_video` | POST   | Detect & track in video    |
-| `/records`      | GET    | Fetch records              |
-| `/update_plate` | POST   | Update a plate number      |
-| `/approve`      | POST   | Approve violation          |
-| `/reject`       | POST   | Reject violation           |
+| Endpoint        | Method | Description                  |
+| --------------- | ------ | ---------------------------- |
+| `/detect_image` | POST   | Detect violations from image |
+| `/detect_video` | POST   | Detect + track in video      |
+| `/records`      | GET    | Retrieve saved records       |
+| `/update_plate` | POST   | Update license plate         |
+| `/approve`      | POST   | Approve a violation          |
+| `/reject`       | POST   | Reject a violation           |
 
 ---
 
@@ -227,5 +226,4 @@ violations (
 
 # 📜 11. License
 
-Distributed under the **MIT License**.
-
+This project is distributed under the **MIT License**.
