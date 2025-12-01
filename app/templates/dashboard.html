@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | Smart Traffic{% endblock %}
+
+{% block content %}
+<div class="glass p-5 space-y-5">
+  <!-- FILTER BAR -->
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full">
+      <div class="flex flex-col">
+        <label class="label">Trạng thái</label>
+        <select id="fStatus" class="glass-input">
+          <option value="">Tất cả</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="flex flex-col">
+        <label class="label">Từ ngày</label>
+        <input id="fFrom" type="date" class="glass-input">
+      </div>
+      <div class="flex flex-col">
+        <label class="label">Đến ngày</label>
+        <input id="fTo" type="date" class="glass-input">
+      </div>
+      <div class="flex items-end">
+        <button id="btnApply" class="btn btn-primary w-full">
+          <i data-feather="filter" class="w-4 h-4"></i> Áp dụng
+        </button>
+      </div>
+      <div class="flex items-end">
+        <button id="btnReset" class="btn btn-ghost w-full">
+          <i data-feather="rotate-ccw" class="w-4 h-4"></i> Reset
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-end gap-2">
+      <a href="/records" class="btn btn-soft">
+        <i data-feather="list" class="w-4 h-4"></i> Xem bản ghi
+      </a>
+      <a href="/export_csv" class="btn btn-ghost">
+        <i data-feather="download" class="w-4 h-4"></i> Export CSV
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="glass-xl p-4 rounded-xl">
+      <div class="text-xs uppercase tracking-wider opacity-60">Tổng bản ghi</div>
+      <div id="kpiTotal" class="text-2xl font-semibold mt-1">—</div>
+    </div>
+    <div class="glass-xl p-4 rounded-xl">
+      <div class="text-xs uppercase tracking-wider opacity-60">Có vi phạm</div>
+      <div id="kpiWithVio" class="text-2xl font-semibold mt-1">—</div>
+    </div>
+    <div class="glass-xl p-4 rounded-xl">
+      <div class="text-xs uppercase tracking-wider opacity-60">Biển số hợp lệ</div>
+      <div id="kpiValidPlates" class="text-2xl font-semibold mt-1">—</div>
+    </div>
+    <div class="glass-xl p-4 rounded-xl">
+      <div class="text-xs uppercase tracking-wider opacity-60">Tỷ lệ đã duyệt</div>
+      <div class="flex items-baseline gap-2 mt-1">
+        <div id="kpiApprovedRate" class="text-2xl font-semibold">—</div>
+        <div class="text-xs opacity-60">/ tất cả</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="grid md:grid-cols-3 gap-5">
+    <div class="glass-xl p-4 rounded-xl">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold">Phân bố vi phạm</h3>
+        <span class="badge badge-amber" id="legendViolations">— loại</span>
+      </div>
+      <canvas id="chartViolations" height="200"></canvas>
+    </div>
+
+    <div class="glass-xl p-4 rounded-xl">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold">Top biển số (theo số lần)</h3>
+        <span class="badge" id="legendTopPlates">Top 10</span>
+      </div>
+      <canvas id="chartTopPlates" height="200"></canvas>
+    </div>
+
+    <div class="glass-xl p-4 rounded-xl">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold">Bản ghi theo ngày</h3>
+        <span class="badge" id="legendTimeline">— ngày</span>
+      </div>
+      <canvas id="chartTimeline" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="glass p-4 rounded-xl text-sm leading-relaxed">
+    <div class="flex items-start gap-2">
+      <i data-feather="info" class="w-4 h-4 mt-0.5"></i>
+      <div>
+        <div><b>Giải thích:</b></div>
+        <ul class="list-disc ml-5 space-y-1 opacity-80">
+          <li><b>Tổng bản ghi</b>: số lượng ảnh/video snapshot được lưu trong hệ thống.</li>
+          <li><b>Có vi phạm</b>: số bản ghi có ít nhất một loại vi phạm được gán.</li>
+          <li><b>Biển số hợp lệ</b>: số bản ghi có biển số match regex VN (VD: <span class="mono">59H1-23456</span>).</li>
+          <li><b>Tỷ lệ đã duyệt</b>: số bản ghi <span class="badge badge-green">Approved</span> trên tổng tất cả bản ghi.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  feather.replace();
+
+  const qs = (sel) => document.querySelector(sel);
+  const fStatus = qs('#fStatus');
+  const fFrom   = qs('#fFrom');
+  const fTo     = qs('#fTo');
+  const btnApply= qs('#btnApply');
+  const btnReset= qs('#btnReset');
+
+  const kpiTotal       = qs('#kpiTotal');
+  const kpiWithVio     = qs('#kpiWithVio');
+  const kpiValidPlates = qs('#kpiValidPlates');
+  const kpiApprovedRate= qs('#kpiApprovedRate');
+
+  const legendViolations = qs('#legendViolations');
+  const legendTopPlates  = qs('#legendTopPlates');
+  const legendTimeline   = qs('#legendTimeline');
+
+  let chViolations, chTopPlates, chTimeline;
+
+  function buildURL() {
+    const p = new URLSearchParams();
+    if (fStatus.value) p.set('status', fStatus.value);
+    if (fFrom.value) p.set('from', fFrom.value);
+    if (fTo.value) p.set('to', fTo.value);
+    return '/dashboard_data' + (p.toString() ? ('?' + p.toString()) : '');
+    // server trả: { violations, top_plates, timeline, kpi:{ total, with_violation, approved_rate, valid_plates } }
+  }
+
+  async function loadData() {
+    const url = buildURL();
+    try {
+      const res = await fetch(url);
+      const d = await res.json();
+
+      // --- KPI ---
+      kpiTotal.textContent        = (d.kpi?.total ?? 0).toLocaleString('vi-VN');
+      kpiWithVio.textContent      = (d.kpi?.with_violation ?? 0).toLocaleString('vi-VN');
+      kpiValidPlates.textContent  = (d.kpi?.valid_plates ?? 0).toLocaleString('vi-VN');
+      kpiApprovedRate.textContent = ((d.kpi?.approved_rate ?? 0) + '%');
+
+      // --- Violations ---
+      const vLabels = Object.keys(d.violations || {});
+      const vData   = Object.values(d.violations || {});
+      legendViolations.textContent = (vLabels.length || '0') + ' loại';
+
+      if (chViolations) chViolations.destroy();
+      chViolations = new Chart(document.getElementById('chartViolations'), {
+        type: 'doughnut',
+        data: {
+          labels: vLabels,
+          datasets: [{ data: vData }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { mode: 'index', intersect: false }
+          },
+          animation: { duration: 600 }
+        }
+      });
+
+      // --- Top plates ---
+      const tpLabels = (d.top_plates || []).map(x => x.plate);
+      const tpData   = (d.top_plates || []).map(x => x.count);
+      legendTopPlates.textContent = 'Top ' + (tpLabels.length || 0);
+
+      if (chTopPlates) chTopPlates.destroy();
+      chTopPlates = new Chart(document.getElementById('chartTopPlates'), {
+        type: 'bar',
+        data: {
+          labels: tpLabels,
+          datasets: [{ data: tpData }]
+        },
+        options: {
+          indexAxis: 'y',
+          plugins: { legend: { display:false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 } }
+          },
+          animation: { duration: 600 }
+        }
+      });
+
+      // --- Timeline ---
+      const tLabels = (d.timeline || []).map(x => x.date);
+      const tData   = (d.timeline || []).map(x => x.count);
+      legendTimeline.textContent = (tLabels.length || '0') + ' ngày';
+
+      if (chTimeline) chTimeline.destroy();
+      chTimeline = new Chart(document.getElementById('chartTimeline'), {
+        type: 'line',
+        data: {
+          labels: tLabels,
+          datasets: [{
+            data: tData,
+            tension: .35,
+            fill: true
+          }]
+        },
+        options: {
+          plugins: { legend: { display:false }},
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          },
+          animation: { duration: 600 }
+        }
+      });
+
+    } catch (e) {
+      console.error(e);
+      toast('❌ Lỗi tải dashboard');
+    }
+  }
+
+  btnApply.addEventListener('click', loadData);
+  btnReset.addEventListener('click', () => {
+    fStatus.value = '';
+    fFrom.value = '';
+    fTo.value = '';
+    loadData();
+  });
+
+  // auto init
+  loadData();
+</script>
+{% endblock %}

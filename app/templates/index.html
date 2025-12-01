@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% block title %}Upload · Smart Traffic Violation{% endblock %}
+
+{% block head_extra %}
+<style>
+  .card { @apply glass p-5 md:p-6; }
+  .label { @apply text-sm font-medium opacity-70; }
+  .thumb { max-height: 200px; object-fit: contain; }
+  .grid-2 { display:grid; grid-template-columns: 1fr; gap:1rem; }
+  @media (min-width: 768px){ .grid-2{ grid-template-columns: 1fr 1fr; } }
+
+  .glass-input{
+    @apply w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20
+           text-sm focus:outline-none focus:ring-2 focus:ring-sky-400/70;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid gap-6">
+
+  <!-- ========== IMAGE UPLOAD ========== -->
+  <section class="card">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold">Xử lý ảnh</h2>
+      <span class="kbd">POST /detect_image</span>
+    </div>
+
+    <form id="formImage" class="grid-2 items-start">
+      <!-- Cột trái: upload + preview -->
+      <div>
+        <label class="label mb-2 block">Ảnh gốc</label>
+        <input id="imgInput"
+               type="file"
+               accept="image/*"
+               multiple
+               class="block w-full text-sm file:btn file:btn-soft"/>
+
+        <div id="imagePreview" class="mt-3 hidden">
+          <img id="imgPreviewTag" class="rounded-xl shadow-md thumb mx-auto" alt="preview gốc"/>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">
+          <i data-feather="cpu" class="w-4 h-4"></i>
+          Chạy phát hiện
+        </button>
+      </div>
+
+      <!-- Cột phải: kết quả -->
+      <div>
+        <label class="label mb-2 block">Kết quả sau xử lý</label>
+
+        <div id="imageResultMulti" class="hidden space-y-2">
+          <div id="imageResultSummary" class="text-sm opacity-80"></div>
+          <div id="imageResultGrid" class="grid gap-3 md:grid-cols-2"></div>
+        </div>
+
+        <div id="imageResultEmpty" class="opacity-60 text-sm">Chưa có kết quả.</div>
+      </div>
+    </form>
+  </section>
+
+  <!-- ========== VIDEO UPLOAD ========== -->
+  <section class="card">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold">Xử lý video</h2>
+      <span class="kbd">POST /detect_video · /detect_video_batch</span>
+    </div>
+
+    <form id="formVideo" class="grid-2 items-start">
+      <!-- Cột trái: upload + preview -->
+      <div>
+        <label class="label mb-2 block">Video nguồn</label>
+        <input id="vidInput"
+               type="file"
+               accept="video/*"
+               multiple
+               class="block w-full text-sm file:btn file:btn-soft"/>
+
+        <div id="videoPreview" class="mt-3 hidden">
+          <video id="vidPreviewTag"
+                 class="rounded-xl shadow-md w-full max-h-64 bg-black"
+                 controls></video>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">
+          <i data-feather="video" class="w-4 h-4"></i>
+          Chạy theo dõi + phát hiện
+        </button>
+      </div>
+
+      <!-- Cột phải: video output -->
+      <div>
+        <label class="label mb-2 block">Video đã gắn bbox</label>
+
+        <div id="videoResult" class="hidden">
+          <video id="vidResultTag"
+                 class="rounded-xl shadow-md w-full max-h-64 bg-black"
+                 controls
+                 src="">
+            Trình duyệt không hỗ trợ video.
+          </video>
+          <div id="videoMeta" class="text-sm opacity-70 mt-2"></div>
+          <div id="videoLinkWrap" class="mt-1 text-xs">
+            <a id="videoDirectLink" href="#" target="_blank"
+               class="text-sky-400 underline hidden">
+              Mở video trong tab mới
+            </a>
+          </div>
+        </div>
+
+        <div id="videoResultEmpty" class="opacity-60 text-sm">Chưa có kết quả.</div>
+      </div>
+    </form>
+  </section>
+
+  <!-- ========== RECENT RECORDS ========== -->
+  <section class="card">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold">Bản ghi gần đây</h2>
+      <a href="/records" class="btn btn-soft">
+        <i data-feather="database" class="w-4 h-4"></i> Tới trang Bản ghi
+      </a>
+    </div>
+
+    {% if rows and rows|length > 0 %}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {% for r in rows %}
+      {# r = (id,kind,source,frame_index,timestamp,camera_id,
+              vehicle_type,violation_types,license_plate,evidence_path) #}
+      <div class="glass p-3 rounded-xl">
+        <div class="text-xs opacity-60 mb-1">{{ r[4] }}</div>
+        <img src="{{ url_for('uploads', fname=r[9]) }}"
+             alt="evidence"
+             class="rounded-lg w-full h-32 object-cover"/>
+        <div class="mt-2 text-xs space-y-0.5">
+          <div><span class="opacity-60">Loại:</span> {{ r[1] or '-' }}</div>
+          <div><span class="opacity-60">Xe:</span> {{ r[6] or '-' }}</div>
+          <div><span class="opacity-60">Vi phạm:</span> {{ r[7] or '-' }}</div>
+          <div><span class="opacity-60">Plate:</span> {{ r[8] or '-' }}</div>
+        </div>
+        <div class="mt-2">
+          <a class="text-sky-400 text-xs underline"
+             href="{{ url_for('uploads', fname=r[9]) }}"
+             target="_blank">Mở ảnh</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="opacity-60 text-sm">Chưa có bản ghi.</div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function repaintIcons(){ feather.replace(); }
+
+  // ============ IMAGE ============ //
+  const imgInput       = document.getElementById('imgInput');
+  const imgPrevWrap    = document.getElementById('imagePreview');
+  const imgPrevTag     = document.getElementById('imgPreviewTag');
+  const imgResEmpty    = document.getElementById('imageResultEmpty');
+  const imgResMulti    = document.getElementById('imageResultMulti');
+  const imgResSummary  = document.getElementById('imageResultSummary');
+  const imgResGrid     = document.getElementById('imageResultGrid');
+
+  imgInput?.addEventListener('change', (e)=>{
+    const f = (e.target.files || [])[0];
+    if(!f){
+      imgPrevWrap.classList.add('hidden');
+      imgPrevTag.src = '';
+      return;
+    }
+    imgPrevTag.src = URL.createObjectURL(f);
+    imgPrevWrap.classList.remove('hidden');
+    repaintIcons();
+  });
+
+  document.getElementById('formImage')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const files = Array.from(imgInput.files || []);
+    if(!files.length) return toast('Chọn ít nhất 1 ảnh trước');
+
+    const fd = new FormData();
+    files.forEach(f => fd.append('image', f));
+
+    toast('Đang xử lý ảnh...');
+    try{
+      const res  = await fetch('/detect_image', { method:'POST', body: fd });
+      const data = await res.json();
+
+      if(data.ok && Array.isArray(data.items)){
+        imgResGrid.innerHTML = '';
+
+        data.items.forEach((item, idx) => {
+          const card = document.createElement('div');
+          card.className = 'glass p-3 rounded-xl space-y-1';
+          card.innerHTML = `
+            <div class="text-xs opacity-60 mb-1 truncate">
+              ${item.filename || ('Ảnh ' + (idx+1))}
+            </div>
+            <img src="${item.out_url}"
+                 class="rounded-xl shadow-md thumb w-full mx-auto mb-2"/>
+            <div class="flex items-center justify-between text-xs">
+              <a href="${item.out_url}" target="_blank"
+                 class="text-sky-400 underline">Xem kết quả</a>
+              ${
+                item.evidence_url
+                  ? `<a href="${item.evidence_url}"
+                       target="_blank"
+                       class="text-sky-400 underline"></a>`
+                  : ''
+              }
+            </div>
+          `;
+          imgResGrid.appendChild(card);
+        });
+
+        imgResSummary.textContent = `Đã xử lý ${data.items.length} ảnh.`;
+        imgResMulti.classList.remove('hidden');
+        imgResEmpty.classList.add('hidden');
+        toast('Ảnh xử lý xong');
+      }else{
+        toast(data.error || 'Lỗi xử lý ảnh');
+      }
+    }catch(err){
+      toast('Lỗi mạng khi xử lý ảnh');
+    }
+    repaintIcons();
+  });
+
+  // ============ VIDEO ============ //
+  const vidInput        = document.getElementById('vidInput');
+  const vidPrevWrap     = document.getElementById('videoPreview');
+  const vidPrevTag      = document.getElementById('vidPreviewTag');
+  const vidResWrap      = document.getElementById('videoResult');
+  const vidResEmpty     = document.getElementById('videoResultEmpty');
+  const vidResTag       = document.getElementById('vidResultTag');
+  const vidMeta         = document.getElementById('videoMeta');
+  const videoDirectLink = document.getElementById('videoDirectLink');
+
+  vidInput?.addEventListener('change', (e)=>{
+    const f = (e.target.files || [])[0];
+    if(!f){
+      vidPrevWrap.classList.add('hidden');
+      vidPrevTag.src = '';
+      return;
+    }
+    vidPrevTag.src = URL.createObjectURL(f);
+    vidPrevWrap.classList.remove('hidden');
+    repaintIcons();
+  });
+
+  document.getElementById('formVideo')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    const files = Array.from(vidInput.files || []);
+    if(!files.length) return toast('Chọn ít nhất 1 video trước');
+
+    // ===== CASE 1: 1 VIDEO -> /detect_video =====
+    if(files.length === 1){
+      const fd = new FormData();
+      fd.append('video', files[0]);
+
+      toast('Đang xử lý video...');
+      try{
+        const res  = await fetch('/detect_video', { method:'POST', body: fd });
+        const data = await res.json();
+
+        if(data.ok && data.out_url){
+          const url = data.out_url + '?t=' + Date.now();
+
+          vidResTag.pause();
+          vidResTag.src = url;  // gán trực tiếp src
+          vidResTag.load();
+
+          vidResWrap.classList.remove('hidden');
+          vidResEmpty.classList.add('hidden');
+          vidMeta.textContent = `Đã thêm ${data.records_added || 0} bản ghi`;
+
+          videoDirectLink.href = url;
+          videoDirectLink.classList.remove('hidden');
+
+          vidResTag.play().catch(()=>{});
+
+          toast('Video xử lý xong');
+        }else{
+          toast(data.error || 'Lỗi xử lý video');
+        }
+      }catch(err){
+        console.error(err);
+        toast('Lỗi mạng khi xử lý video');
+      }
+      repaintIcons();
+      return;
+    }
+
+    // ===== CASE 2: NHIỀU VIDEO -> /detect_video_batch =====
+    const fd = new FormData();
+    files.forEach(f => fd.append('videos', f));
+    toast(`Đang xử lý ${files.length} video...`);
+
+    try{
+      const res  = await fetch('/detect_video_batch', { method:'POST', body: fd });
+      const data = await res.json();
+
+      if(data.ok && Array.isArray(data.results) && data.results.length){
+        const first = data.results[0];
+        if(first.out_url){
+          const url = first.out_url + '?t=' + Date.now();
+
+          vidResTag.pause();
+          vidResTag.src = url;   // gán trực tiếp src
+          vidResTag.load();
+
+          vidResWrap.classList.remove('hidden');
+          vidResEmpty.classList.add('hidden');
+
+          videoDirectLink.href = url;
+          videoDirectLink.classList.remove('hidden');
+
+          vidResTag.play().catch(()=>{});
+        }
+
+        const lines = data.results.map((item, idx)=>
+          `${idx+1}. ${item.filename} → ${item.out_url} (records=${item.records_added})`
+        );
+        vidMeta.textContent =
+          `Đã xử lý ${data.results.length} video:\n` +
+          lines.join('\n');
+
+        toast('Tất cả video xử lý xong');
+      }else{
+        toast(data.error || 'Lỗi xử lý video hàng loạt');
+      }
+    }catch(err){
+      console.error(err);
+      toast('Lỗi mạng khi xử lý video hàng loạt');
+    }
+
+    repaintIcons();
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="vi" class="h-full scroll-smooth" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Smart Traffic Violation{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Icon (Heroicons + Tabler for variety) -->
+  <script src="https://unpkg.com/feather-icons"></script>
+
+  <style>
+    :root{
+      --bg: 245 245 247;         /* light macOS gray */
+      --fg: 17 24 39;
+      --glass: 255 255 255 / 0.55;
+      --glass-stroke: 255 255 255 / 0.35;
+      --blur: 16px;
+      --ring: 59 130 246;        /* blue-500 */
+      --accent: 56 189 248;      /* sky-400 */
+    }
+    [data-theme="dark"]{
+      --bg: 3 7 18;              /* zinc-950-ish */
+      --fg: 229 231 235;
+      --glass: 255 255 255 / 0.08;
+      --glass-stroke: 255 255 255 / 0.08;
+      --blur: 18px;
+      --ring: 125 211 252;       /* sky-300 */
+      --accent: 125 211 252;
+    }
+
+    html, body { height: 100%; }
+    body{
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji','Segoe UI Emoji';
+      color: rgb(var(--fg));
+      background:
+        radial-gradient(1200px 600px at 10% -20%, rgba(56,189,248,0.15), transparent),
+        radial-gradient(1400px 800px at 110% 10%, rgba(196,181,253,0.16), transparent),
+        rgb(var(--bg));
+    }
+
+    /* Liquid glass card */
+    .glass {
+      background: color-mix(in oklab, rgba(var(--glass)) 100%, transparent);
+      -webkit-backdrop-filter: saturate(160%) blur(var(--blur));
+      backdrop-filter: saturate(160%) blur(var(--blur));
+      border: 1px solid color-mix(in oklab, rgba(var(--glass-stroke)) 100%, transparent);
+      border-radius: 18px;
+      box-shadow:
+        0 10px 30px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .glass-cta{
+      background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
+      -webkit-backdrop-filter: blur(calc(var(--blur) - 6px));
+      backdrop-filter: blur(calc(var(--blur) - 6px));
+      border: 1px solid rgba(255,255,255,0.35);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 20px rgba(2,6,23,0.2);
+    }
+    [data-theme="dark"] .glass-cta{
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 22px rgba(0,0,0,0.5);
+    }
+
+    .nav-link{
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .5rem .8rem; border-radius: 12px;
+      transition: all .25s ease;
+    }
+    .nav-link[aria-current="page"]{
+      background: rgba(2,132,199,.12);
+      color: rgb(2,132,199);
+      box-shadow: 0 4px 16px rgba(56,189,248,.25) inset;
+    }
+    .nav-link:hover{
+      transform: translateY(-1px);
+      background: rgba(2,132,199,.08);
+    }
+
+    .btn{
+      display: inline-flex; align-items:center; gap:.5rem;
+      padding: .65rem .95rem; border-radius: 12px; font-weight:600;
+      transition: all .25s ease; border:1px solid transparent;
+    }
+    .btn-primary{
+      color: white; background: linear-gradient(180deg, rgb(56,189,248), rgb(2,132,199));
+      box-shadow: 0 8px 22px rgba(56,189,248,.35);
+    }
+    .btn-primary:hover{ transform: translateY(-1px) scale(1.01); }
+    .btn-soft{
+      background: rgba(2,132,199,.08); color: rgb(2,132,199);
+      border-color: rgba(2,132,199,.18);
+    }
+    .btn-soft:hover{ background: rgba(2,132,199,.12); }
+
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      border:1px solid rgba(0,0,0,.08);
+      border-bottom-width: 2px;
+      padding: .15rem .4rem;
+      border-radius: 6px;
+      font-size: .75rem;
+      background: rgba(255,255,255,.66);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      right: 20px; bottom: 20px; z-index: 60;
+      translate: 0 12px; opacity: 0; pointer-events: none;
+      transition: all .28s ease;
+    }
+    .toast.show{ translate: 0 0; opacity: 1; pointer-events: auto; }
+  </style>
+
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="min-h-full">
+  <!-- NAV -->
+  <header class="sticky top-0 z-40">
+    <div class="mx-auto max-w-7xl px-4 py-4">
+      <div class="glass flex items-center justify-between px-4 py-3">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl glass-cta grid place-items-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="opacity-80">
+              <path d="M3 12h18M12 3v18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-lg font-extrabold tracking-tight">Smart Traffic Violation</div>
+            <div class="text-xs opacity-60 -mt-0.5">Giám sát vi phạm &amp; trích xuất biển số</div>
+          </div>
+        </div>
+
+        <nav class="flex items-center gap-1">
+          {% set p = request.path %}
+          <a href="/" class="nav-link {% if p=='/' %}aria-[current]=page{% endif %}" aria-current="{% if p=='/' %}page{% endif %}">
+            <i data-feather="upload" class="w-4 h-4"></i> Upload
+          </a>
+          <a href="/records" class="nav-link" aria-current="{% if p.startswith('/records') %}page{% endif %}">
+            <i data-feather="database" class="w-4 h-4"></i> Bản ghi
+          </a>
+          <a href="/dashboard" class="nav-link" aria-current="{% if p.startswith('/dashboard') %}page{% endif %}">
+            <i data-feather="pie-chart" class="w-4 h-4"></i> Dashboard
+          </a>
+        </nav>
+
+        <div class="flex items-center gap-2">
+          <button id="themeToggle" class="btn btn-soft" type="button" title="Theme">
+            <i data-feather="moon" class="w-4 h-4"></i>
+            <span class="hidden md:inline">Theme</span>
+          </button>
+          <a href="/export_csv" class="btn btn-primary" title="Xuất CSV">
+            <i data-feather="download-cloud" class="w-4 h-4"></i>
+            Export CSV
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="mx-auto max-w-7xl px-4 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="mx-auto max-w-7xl px-4 pb-10">
+    <div class="text-sm opacity-60">
+      © {{  (now() if now else '')  }} Smart Traffic Violation — Đồ án Khoa học Máy tính.
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast" class="toast glass px-4 py-3 rounded-xl">
+    <div id="toastText" class="text-sm font-medium"></div>
+  </div>
+
+  {% block scripts %}{% endblock %}
+
+  <script>
+    // Feather icons
+    feather.replace();
+
+    // Theme handling (persist to localStorage) — iOS-like
+    const root = document.documentElement;
+    const btnTheme = document.getElementById('themeToggle');
+    const storeKey = 'stv-theme';
+
+    function applyTheme(t){
+      if(!t){ t = 'light'; }
+      root.setAttribute('data-theme', t);
+      localStorage.setItem(storeKey, t);
+      // Switch icon
+      btnTheme.innerHTML = (t === 'dark')
+        ? '<i data-feather="sun" class="w-4 h-4"></i><span class="hidden md:inline">Light</span>'
+        : '<i data-feather="moon" class="w-4 h-4"></i><span class="hidden md:inline">Dark</span>';
+      feather.replace();
+    }
+
+    // Init theme
+    (function(){
+      let t = localStorage.getItem(storeKey);
+      if(!t){
+        // follow system once
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        t = isDark ? 'dark' : 'light';
+      }
+      applyTheme(t);
+    })();
+
+    btnTheme?.addEventListener('click', ()=>{
+      const cur = root.getAttribute('data-theme') || 'light';
+      applyTheme(cur === 'light' ? 'dark' : 'light');
+    });
+
+    // Toast helper
+    window.toast = function(msg, timeout=2200){
+      const el = document.getElementById('toast');
+      const txt = document.getElementById('toastText');
+      txt.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(()=> el.classList.remove('show'), timeout);
+    };
+  </script>
+</body>
+</html>

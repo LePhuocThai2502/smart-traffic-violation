@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}Records | Smart Traffic{% endblock %}
+
+{% block content %}
+<div class="glass p-5">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+    <h1 class="text-xl font-semibold flex items-center gap-2">
+      <i data-feather="database" class="w-5 h-5"></i>
+      Lịch sử bản ghi
+    </h1>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap items-center gap-2">
+      <select id="filterStatus" class="glass-input">
+        <option value="">Tất cả trạng thái</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <input id="filterPlate" class="glass-input" placeholder="Biển số (VD: 59H1-23456)">
+      <input id="filterDateFrom" type="date" class="glass-input">
+      <span class="opacity-60">→</span>
+      <input id="filterDateTo" type="date" class="glass-input">
+      <button id="btnApplyFilter" class="btn btn-primary">Lọc</button>
+      <a href="/export_csv" class="btn btn-ghost">
+        <i data-feather="download" class="w-4 h-4"></i> Export CSV
+      </a>
+    </div>
+  </div>
+
+  <div class="overflow-auto rounded-xl border border-white/10">
+    <table id="tblRecords" class="w-full text-sm">
+      <thead class="sticky top-0 z-10 backdrop-blur-xl bg-white/60 dark:bg-zinc-900/60">
+        <tr>
+          <th class="th">#</th>
+          <th class="th">Thời gian</th>
+          <th class="th">Loại</th>
+          <th class="th">Frame</th>
+          <th class="th">Xe</th>
+          <th class="th">Biển số</th>
+          <th class="th">Vi phạm</th>
+          <th class="th">Bằng chứng</th>
+          <th class="th">Trạng thái</th>
+          <th class="th text-right">Hành động</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/10">
+        {% for r in rows %}
+        {# r = (id,kind,source,frame_index,timestamp,camera_id,
+        vehicle_type,violation_types,license_plate,evidence_path,status) #}
+
+        <tr class="hover:bg-white/40 dark:hover:bg-white/5 transition">
+          <!-- ID -->
+          <td class="td mono">{{ r[0] }}</td>
+
+          <!-- Thời gian -->
+          <td class="td text-zinc-600 dark:text-zinc-300">{{ r[4] }}</td>
+
+          <!-- Loại (image / video) -->
+          <td class="td">{{ r[1] }}</td>
+
+          <!-- Frame -->
+          <td class="td">{{ r[3] if r[3] is not none else '-' }}</td>
+
+          <!-- Xe: car / motorbike / ... -->
+          <td class="td">{{ r[6] or '-' }}</td>
+
+          <!-- Biển số: lấy từ license_plate hoặc UNKNOWN -->
+          <td class="td">
+            {% set plate = r[8] or '' %}
+            {% if plate %}
+              <span class="mono font-semibold">{{ plate }}</span>
+            {% else %}
+              <span class="mono opacity-60">UNKNOWN</span>
+            {% endif %}
+          </td>
+
+          <!-- Vi phạm: red_light_violation,no_helmet,... -->
+          <td class="td">
+            {% if r[7] %}
+              {% for v in r[7].split(',') if v %}
+                <span class="chip chip-red">{{ v }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="opacity-60">-</span>
+            {% endif %}
+          </td>
+
+          <!-- Bằng chứng: ảnh -->
+          <td class="td">
+            {% if r[9] %}
+              <button class="preview-btn" data-src="/uploads/{{ r[9] }}">
+                <i data-feather="image" class="w-4 h-4"></i> Xem
+              </button>
+            {% else %}
+              <span class="opacity-60">-</span>
+            {% endif %}
+          </td>
+
+          <!-- Trạng thái: tạm thời luôn Pending (vì chưa có cột status trong DB) -->
+          <td class="td">
+            {% set st = (r[10] or 'pending')|lower %}
+            {% if st == 'approved' %}
+              <span class="badge badge-green">Approved</span>
+            {% elif st == 'rejected' %}
+              <span class="badge badge-rose">Rejected</span>
+            {% else %}
+              <span class="badge badge-amber">Pending</span>
+            {% endif %}
+          </td>
+
+          <!-- Hành động -->
+          <td class="td">
+            <div class="flex items-center gap-2 justify-end">
+              <!-- sửa biển số: dùng giá trị hiện tại của cột Biển số -->
+              <button class="btn-xxs btn-ghost edit-plate"
+                      data-id="{{ r[0] }}" data-plate="{{ r[8] or '' }}">
+                <i data-feather="edit-3" class="w-4 h-4"></i> Sửa biển số
+              </button>
+              <button class="btn-xxs btn-soft approve" data-id="{{ r[0] }}">
+                <i data-feather="check" class="w-4 h-4"></i> Approve
+              </button>
+              <button class="btn-xxs btn-soft-danger reject" data-id="{{ r[0] }}">
+                <i data-feather="x" class="w-4 h-4"></i> Reject
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if rows|length == 0 %}
+    <div class="text-center py-16 opacity-70">
+      <i data-feather="inbox" class="w-10 h-10 mx-auto mb-2"></i>
+      Chưa có bản ghi.
+    </div>
+  {% endif %}
+</div>
+
+<!-- Preview Modal -->
+<div id="previewModal" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-close></div>
+  <div class="relative max-w-5xl w-[92vw] glass-xl p-3">
+    <button class="absolute top-2 right-2 btn-xxs btn-ghost" data-close>
+      <i data-feather="x" class="w-4 h-4"></i>
+    </button>
+    <img id="previewImg" class="w-full h-[70vh] object-contain rounded-xl">
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  feather.replace();
+
+  // ------- Client filter (lọc trên bảng hiện tại) -------
+  const filterStatus = document.getElementById('filterStatus');
+  const filterPlate  = document.getElementById('filterPlate');
+  const filterFrom   = document.getElementById('filterDateFrom');
+  const filterTo     = document.getElementById('filterDateTo');
+  const btnApply     = document.getElementById('btnApplyFilter');
+  const tableBody    = document.getElementById('tblRecords').querySelector('tbody');
+
+  btnApply.addEventListener('click', () => {
+    const st  = filterStatus.value.trim().toLowerCase();
+    const kw  = filterPlate.value.trim().toUpperCase();
+    const d1  = filterFrom.value;
+    const d2  = filterTo.value;
+
+    [...tableBody.rows].forEach(tr => {
+      const tstamp = tr.children[1].innerText.trim();  // YYYY-MM-DD HH:MM:SS
+      const plate  = tr.children[5].innerText.toUpperCase();
+      const status = tr.children[8].innerText.trim().toLowerCase();
+
+      let ok = true;
+
+      if (st && status !== st) ok = false;
+      if (kw && !plate.includes(kw)) ok = false;
+
+      if (d1) {
+        const ts = tstamp.split(' ')[0];
+        if (ts < d1) ok = false;
+      }
+      if (d2) {
+        const ts = tstamp.split(' ')[0];
+        if (ts > d2) ok = false;
+      }
+
+      tr.style.display = ok ? '' : 'none';
+    });
+  });
+
+  // ------- Preview Modal -------
+  const modal = document.getElementById('previewModal');
+  const modalImg = document.getElementById('previewImg');
+  document.querySelectorAll('.preview-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalImg.src = btn.dataset.src;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    });
+  });
+  modal.querySelectorAll('[data-close]').forEach(el => {
+    el.addEventListener('click', () => {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      modalImg.src = '';
+    });
+  });
+
+  // ------- Approve / Reject (giữ nguyên, sẽ dùng khi bạn có API) -------
+  document.querySelectorAll('.approve').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const res = await fetch('/api/record/update_status', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({id, status:'approved'})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast('✅ Approved!');
+        const badgeCell = btn.closest('tr').children[8].querySelector('.badge');
+        badgeCell.className = 'badge badge-green';
+        badgeCell.textContent = 'Approved';
+      } else {
+        toast('❌ Lỗi duyệt hồ sơ');
+      }
+    });
+  });
+
+  document.querySelectorAll('.reject').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const res = await fetch('/api/record/update_status', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({id, status:'rejected'})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast('🗑️ Rejected!');
+        const badgeCell = btn.closest('tr').children[8].querySelector('.badge');
+        badgeCell.className = 'badge badge-rose';
+        badgeCell.textContent = 'Rejected';
+      } else {
+        toast('❌ Lỗi cập nhật');
+      }
+    });
+  });
+
+  // ------- Edit plate -------
+  document.querySelectorAll('.edit-plate').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const current = btn.dataset.plate || '';
+      const raw = prompt('Nhập biển số (VD: 59H1-23456):', current);
+      if (raw === null) return;
+
+      const res = await fetch('/api/record/update_plate', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({id, plate: raw})
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast('Đã cập nhật biển số');
+        const plateCell = btn.closest('tr').children[5];
+        const monoSpan = plateCell.querySelector('.mono');
+        monoSpan.textContent = data.plate_norm || raw;
+        feather.replace();
+      } else {
+        toast('❌ Lỗi lưu biển số');
+      }
+    });
+  });
+</script>
+{% endblock %}
